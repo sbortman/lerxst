@@ -14,8 +14,7 @@ import java.time.Duration
 @CompileStatic
 @Slf4j
 class WebFeatureService {
-  HttpClient wfsClient = HttpClient.create( 'http://localhost:8080'.toURL() )
-  String path = '/geoserver/wfs'
+  WfsClient wfsClient = new WfsClient( 'http://localhost:8080'.toURL(), '/geoserver/wfs' )
 
   def doSomething( GrailsParameterMap params ) {
     def wfsParams = [
@@ -59,7 +58,7 @@ class WebFeatureService {
       break
     }
 
-    HttpResponse results = doGet( wfsParams )
+    HttpResponse results = wfsClient?.doGet( wfsParams )
     String body = results.body()
 
     body = body.replace( ':8080/geoserver', ':8081/lerxst' )
@@ -69,7 +68,7 @@ class WebFeatureService {
 
   def doSomething( GPathResult body ) {
     String inputBody = groovy.xml.XmlUtil.serialize( body )
-    HttpResponse results = doPost( inputBody )
+    HttpResponse results = wfsClient?.doPost( inputBody )
     String outputBody = results?.body()
 
     log.info( body?.name() )
@@ -78,17 +77,5 @@ class WebFeatureService {
     log.info( outputBody )
 
     [ contentType: results.contentType.get(), text: outputBody ]
-  }
-
-  HttpResponse doGet( Map<String, Object> wfsParams ) {
-    UriBuilder uri = UriBuilder.of( path )
-
-    wfsParams.each { k, v -> uri.queryParam( k, v ) }
-    wfsClient.toBlocking().exchange( HttpRequest.GET( uri.build() ), String )
-  }
-
-  HttpResponse doPost( String body ) {
-    //wfsClient.configuration.readTimeout = Duration.ofSeconds(60)
-    wfsClient.toBlocking().exchange( HttpRequest.POST( '/geoserver/wfs', body ), String )
   }
 }
